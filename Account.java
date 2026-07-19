@@ -44,14 +44,34 @@ public abstract class Account {
             }
             this.password = PasswordUtil.hashPassword(newPassword.toCharArray());
         }
+        else
+        {
+            System.out.println("Wrong password, Unable to change password");
+        }
     }
 
     abstract void withdraw(double withdraw);
 
     void deposit(double deposit)
     {
-        balance += deposit;
-        System.out.printf("[SUCCESS] %s deposited %.2f , Current Balance: %.2f \n", name , deposit, balance);
+        if (deposit > 0)
+        {
+            balance += deposit;
+            System.out.printf("[SUCCESS] %s deposited %.2f , Current Balance: %.2f \n", name , deposit, balance);
+            Logger.getInstance().produce(
+                    String.format("%s deposited %.2f, new balance %.2f", name, deposit, balance),
+                    Logger.log.INFO
+            );
+        }
+        else
+        {
+            System.out.printf("[FAILED] %s tried to deposit invalid amount %.2f \n", name , deposit);
+            Logger.getInstance().produce(
+                    String.format("%s tried to deposit invalid amount %.2f", name, deposit),
+                    Logger.log.ERROR
+            );
+        }
+
     }
 
     abstract public String getAccountType();
