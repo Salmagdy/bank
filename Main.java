@@ -28,6 +28,7 @@ public class Main {
             }
         }
         ManagingFiles.saveAllAccounts(accounts);
+        scanner.close();
     }
 
 
@@ -69,8 +70,11 @@ public class Main {
 
         if (!checkPassword(password, a, scanner)) {
             System.out.println("Too many failed attempts.");
+            Logger.getInstance().produce(name + " FAILED login (too many attempts)", Logger.log.ERROR);
             return;
         }
+        Logger.getInstance().produce(name + " logged in", Logger.log.INFO);
+
 
         int subMenuChoice = promptAccountMenu(scanner);
         while (subMenuChoice != 0) {
@@ -93,11 +97,13 @@ public class Main {
                     String oldPassword = scanner.nextLine();
                     if (!checkPassword(oldPassword, a, scanner)) {
                         System.out.println("Too many failed attempts.");
+                        Logger.getInstance().produce(a.getName() + " FAILED password change (too many attempts)", Logger.log.ERROR);
                         return;
                     }
                     System.out.print("Enter the new password: ");
                     String newPassword = scanner.nextLine();
                     a.changePassword(oldPassword, newPassword, scanner);
+                    Logger.getInstance().produce(a.getName() + " changed password", Logger.log.INFO);
                 }
                 default -> System.out.println("Invalid choice, try again");
             }
@@ -113,6 +119,8 @@ public class Main {
                     System.out.print("Enter your name: ");
                     String name = scanner.nextLine();
 
+                    accountNameValidation(name, accounts, scanner);
+
                     System.out.print("Enter the amount: ");
                     double amount = scanner.nextDouble();
                     scanner.nextLine();
@@ -125,6 +133,7 @@ public class Main {
                 case 2 -> {
                     System.out.print("Enter your name: ");
                     String name = scanner.nextLine();
+                    accountNameValidation(name, accounts, scanner);
 
                     System.out.printf("Enter the amount (must be more than %.0f): ", Savings.minimumBalance);
                     double amount = scanner.nextDouble();
@@ -149,7 +158,7 @@ public class Main {
     }
 
     public static boolean checkPassword(String password, Account a, Scanner scanner) {
-        int passwordTrials = 0;
+        int passwordTrials = 1;
         while (!PasswordUtil.verifyPassword(password.toCharArray(), a.getPassword())) {
             if (passwordTrials >= MAX_PASSWORD_TRIES) {
                 return false;
@@ -179,5 +188,15 @@ public class Main {
         } while (password == null);
 
         return PasswordUtil.hashPassword(password.toCharArray());
+    }
+
+    private static void accountNameValidation(String name, List<Account> accounts, Scanner scanner)
+    {
+
+        while(Account.findAccountByName(name,accounts) == null || name == "")
+        {
+            System.out.print("Invalid username, try another one: ");
+            name = scanner.nextLine();
+        }
     }
 }
