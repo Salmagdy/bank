@@ -68,7 +68,7 @@ public class Main {
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
 
-        if (!checkPassword(password, a, scanner)) {
+        if (checkPassword(password, a, scanner) == null) {
             System.out.println("Too many failed attempts.");
             Logger.getInstance().produce(name + " FAILED login (too many attempts)", Logger.log.ERROR);
             return;
@@ -95,15 +95,19 @@ public class Main {
                 case 4 -> {
                     System.out.print("Enter the previous password: ");
                     String oldPassword = scanner.nextLine();
-                    if (!checkPassword(oldPassword, a, scanner)) {
+                    String verifiedOldPassword = checkPassword(oldPassword, a, scanner);
+                    if (verifiedOldPassword == null) {
                         System.out.println("Too many failed attempts.");
                         Logger.getInstance().produce(a.getName() + " FAILED password change (too many attempts)", Logger.log.ERROR);
                         return;
                     }
                     System.out.print("Enter the new password: ");
                     String newPassword = scanner.nextLine();
-                    a.changePassword(oldPassword, newPassword, scanner);
-                    Logger.getInstance().produce(a.getName() + " changed password", Logger.log.INFO);
+                    boolean changed = a.changePassword(newPassword, scanner);
+                    Logger.getInstance().produce(
+                            a.getName() + (changed ? " changed password" : " FAILED password change"),
+                            changed ? Logger.log.INFO : Logger.log.WARNING
+                    );
                 }
                 default -> System.out.println("Invalid choice, try again");
             }
@@ -119,21 +123,37 @@ public class Main {
                     System.out.print("Enter your name: ");
                     String name = scanner.nextLine();
 
-                    accountNameValidation(name, accounts, scanner);
+                    name = accountNameValidation(name, accounts, scanner);
 
                     System.out.print("Enter the amount: ");
                     double amount = scanner.nextDouble();
                     scanner.nextLine();
+                    while (amount < 0)
+                    {
+                        System.out.printf("[REJECTED] Amount needs to be positive");
+                        Logger.getInstance().produce(
+                                name + " REJECTED checking account creation: initial amount " + String.format("%.2f", amount) + " below minimum",
+                                Logger.log.WARNING
+                        );
+                        System.out.print("Enter the modified amount: ");
+                        amount = scanner.nextDouble();
+                        scanner.nextLine();
+                    }
 
                     String hashed = collectNewPassword(scanner);
                     Account a = new Checking(name, amount, hashed);
                     accounts.add(a);
                     System.out.printf("[SUCCESS] %s initialized with %.2f \n", name, amount);
+
+                    Logger.getInstance().produce(
+                            name + " created checking account with initial balance " + String.format("%.2f", amount),
+                            Logger.log.INFO
+                    );
                 }
                 case 2 -> {
                     System.out.print("Enter your name: ");
                     String name = scanner.nextLine();
-                    accountNameValidation(name, accounts, scanner);
+                    name = accountNameValidation(name, accounts, scanner);
 
                     System.out.printf("Enter the amount (must be more than %.0f): ", Savings.minimumBalance);
                     double amount = scanner.nextDouble();
@@ -141,6 +161,10 @@ public class Main {
 
                     while (amount < Savings.minimumBalance) {
                         System.out.printf("[REJECTED] Amount needs to be at least %.0f \n", Savings.minimumBalance);
+                        Logger.getInstance().produce(
+                                name + " REJECTED savings account creation: initial amount " + String.format("%.2f", amount) + " below minimum",
+                                Logger.log.WARNING
+                        );
                         System.out.print("Enter the modified amount: ");
                         amount = scanner.nextDouble();
                         scanner.nextLine();
@@ -150,6 +174,11 @@ public class Main {
                     Account a = new Savings(name, amount, hashed);
                     accounts.add(a);
                     System.out.printf("[SUCCESS] %s initialized with %.2f \n", name, amount);
+
+                    Logger.getInstance().produce(
+                            name + " created savings account with initial balance " + String.format("%.2f", amount),
+                            Logger.log.INFO
+                    );
                 }
                 default -> System.out.println("Invalid choice, try again");
             }
@@ -157,17 +186,17 @@ public class Main {
         }
     }
 
-    public static boolean checkPassword(String password, Account a, Scanner scanner) {
+    public static String checkPassword(String password, Account a, Scanner scanner) {
         int passwordTrials = 1;
         while (!PasswordUtil.verifyPassword(password.toCharArray(), a.getPassword())) {
             if (passwordTrials >= MAX_PASSWORD_TRIES) {
-                return false;
+                return null;
             }
             passwordTrials++;
             System.out.println("Incorrect password, please try again");
             password = scanner.nextLine();
         }
-        return true;
+        return password;
     }
 
     private static String collectNewPassword(Scanner scanner) {
@@ -190,13 +219,14 @@ public class Main {
         return PasswordUtil.hashPassword(password.toCharArray());
     }
 
-    private static void accountNameValidation(String name, List<Account> accounts, Scanner scanner)
+    private static String accountNameValidation(String name, List<Account> accounts, Scanner scanner)
     {
-
-        while(Account.findAccountByName(name,accounts) == null || name == "")
+        while(Account.findAccountByName(name,accounts) != null || name.isEmpty())
         {
+            Logger.getInstance().produce("Rejected account creation attempt: username '" + name + "' invalid or taken", Logger.log.WARNING);
             System.out.print("Invalid username, try another one: ");
             name = scanner.nextLine();
         }
+        return name;
     }
 }
