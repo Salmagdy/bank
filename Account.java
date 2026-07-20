@@ -33,21 +33,14 @@ public abstract class Account {
         this.balance = balance;
     }
 
-    void changePassword(String oldPassword, String newPassword, Scanner scanner) {
+    boolean changePassword(String newPassword, Scanner scanner) {
 
-        if (PasswordUtil.verifyPassword(oldPassword.toCharArray(), this.password))
-        {
-            while(!newPassword.matches("\\d{4}"))
-            {
-                System.out.println("Invalid password. Please try again");
-                newPassword = scanner.nextLine();
-            }
-            this.password = PasswordUtil.hashPassword(newPassword.toCharArray());
+        while (!newPassword.matches("\\d{4}")) {
+            System.out.println("Invalid password. Please try again");
+            newPassword = scanner.nextLine();
         }
-        else
-        {
-            System.out.println("Wrong password, Unable to change password");
-        }
+        this.password = PasswordUtil.hashPassword(newPassword.toCharArray());
+        return true;
     }
 
     abstract void withdraw(double withdraw);
